@@ -1,110 +1,104 @@
-import asyncio
-import json
-import os
 import uuid
+from dataclasses import dataclass
 
-import httpx
+import litellm
 import reflex as rx
-from openai import AsyncOpenAI
+from dotenv import load_dotenv
+from litellm.types.utils import ModelResponseStream
+
+load_dotenv()
+
+
+@dataclass
+class MessageRole:
+    """
+    Define the roles of who generated the messages.
+    """
+
+    USER = 'user'
+    ASSISTANT = 'assistant'
+    SYSTEM = 'system'
+
 
 class SettingsState(rx.State):
     # The accent color for the app
-    color: str = "violet"
-
+    color: str = 'violet'
     # The font family for the app
-    font_family: str = "Poppins"
+    font_family: str = 'Poppins'
 
 
-class State(rx.State):
-    # The current question being asked.
+class ChatState(rx.State):
+    # The current question being asked
     question: str
-
-    # Whether the app is processing a question.
+    # Capture the streaming response
+    streaming_content: str = ''
+    # Whether the app is processing a question
     processing: bool = False
-
-    # Keep track of the chat history as a list of (question, answer) tuples.
-    chat_history: list[tuple[str, str]] = []
-
+    # Keep track of the chat history
+    chat_history: list[dict[str, str]] = []
+    model: str = 'gemini/gemini-2.0-flash-lite'
     user_id: str = str(uuid.uuid4())
 
     async def answer(self):
-        # Set the processing state to True.
         self.processing = True
         yield
 
-        # convert chat history to a list of dictionaries
-        chat_history_dicts = []
-        for chat_history_tuple in self.chat_history:
-            chat_history_dicts.append(
-                {"role": "user", "content": chat_history_tuple[0]}
-            )
-            chat_history_dicts.append(
-                {"role": "assistant", "content": chat_history_tuple[1]}
-            )
-
-        self.chat_history.append((self.question, ""))
-
-        # Clear the question input.
-        question = self.question
-        self.question = ""
-
-        # Yield here to clear the frontend input before continuing.
+        query = self.question
+        self.question = ''
         yield
 
-        
-        client = httpx.AsyncClient()
+        try:
+            self.chat_history.append({'role': MessageRole.USER, 'content': query})
+            self.streaming_content = '' # Reset the streaming content
+            async for chunk in await litellm.acompletion(
+                    model=self.model,
+                    messages=self.chat_history,
+                    response_format=None,
+                    temperature=0.01,
+                    max_tokens=512,
+                    stream=True,
+                    metadata={'session_id': self.user_id},  # Set langfuse Session ID
+            ):  # type: ModelResponseStream
+                if 'choices' in chunk and chunk['choices'][0]['delta']:
+                    delta_content = chunk['choices'][0]['delta'].content
+                    if delta_content:
+                        self.streaming_content += str(delta_content)
+                        yield
 
-        # call the agentic workflow
-        input_payload = {
-            "chat_history_dicts": chat_history_dicts,
-            "user_input": question,
-        }
-        deployment_name = os.environ.get("DEPLOYMENT_NAME", "MyDeployment")
-        apiserver_url = os.environ.get("APISERVER_URL", "http://localhost:4501")
-        response = await client.post(
-            f"{apiserver_url}/deployments/{deployment_name}/tasks/create",
-            json={"input": json.dumps(input_payload)},
-            timeout=60,
-        )
-        answer = response.text
-
-        for i in range(len(answer)):
-            # Pause to show the streaming effect.
-            await asyncio.sleep(0.01)
-            # Add one letter at a time to the output.
-            self.chat_history[-1] = (
-                self.chat_history[-1][0],
-                answer[: i + 1],
+            self.chat_history.append(
+                {'role': MessageRole.ASSISTANT, 'content': self.streaming_content}
             )
             yield
-        
-
-        # Add to the answer as the chatbot responds.
-        answer = ""
-        yield
-
-        async for item in session:
-            if hasattr(item.choices[0].delta, "content"):
-                if item.choices[0].delta.content is None:
-                    break
-                answer += item.choices[0].delta.content
-                self.chat_history[-1] = (self.chat_history[-1][0], answer)
-                yield
-
-        # Ensure the final answer is added to chat history
-        if answer:
-            self.chat_history[-1] = (self.chat_history[-1][0], answer)
+            self.streaming_content = ''
+        except Exception as e:
+            self.streaming_content = f'An error occurred: {e}'
+            yield
+            self.chat_history.append(
+                {'role': MessageRole.ASSISTANT, 'content': self.streaming_content}
+            )
+        finally:
+            self.processing = False
             yield
 
-        # Set the processing state to False.
-        self.processing = False
+    def get_history(self) -> list[dict[str, str]]:
+        """
+        Get the conversation history.
+
+        Returns:
+            A list of messages exchanged between the user and the LLM.
+        """
+        return self.chat_history
+
+    def clear_chat_history(self):
+        """
+        Clear the chat history.
+        """
+        self.chat_history = []
 
     async def handle_key_down(self, key: str):
-        if key == "Enter":
+        if key == 'Enter':
             async for t in self.answer():
                 yield t
 
-    def clear_chat(self):
-        # Reset the chat history and processing state
-        self.chat_history = []
-        self.processing = False
+            self.question = ''
+            yield

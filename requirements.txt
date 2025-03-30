@@ -1,3 +1,5 @@
-llama-deploy
 reflex>=0.5.10
-openai
+litellm~=1.65.0
+
+pydantic~=2.11.1
+python-dotenv

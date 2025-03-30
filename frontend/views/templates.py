@@ -1,5 +1,6 @@
 import reflex as rx
-from frontend.state import State
+
+from frontend.state import ChatState
 
 
 def template_card(icon: str, title: str, description: str, color: str) -> rx.Component:
@@ -8,7 +9,7 @@ def template_card(icon: str, title: str, description: str, color: str) -> rx.Com
         rx.text(title, class_name="font-medium text-slate-11 text-sm"),
         rx.text(description, class_name="text-slate-10 text-xs"),
         class_name="relative align-top flex flex-col gap-2 border-slate-4 bg-slate-1 hover:bg-slate-3 shadow-sm px-3 pt-3 pb-4 border rounded-2xl text-[15px] text-start transition-colors",
-        on_click=[State.set_question(description), State.answer],
+        on_click=[ChatState.set_question(description), ChatState.answer],
     )
 
 
@@ -50,5 +51,5 @@ def templates() -> rx.Component:
             "animation": "reveal 0.35s ease-out",
             "@keyframes reveal": {"0%": {"opacity": "0"}, "100%": {"opacity": "1"}},
         },
-        display=rx.cond(State.chat_history, "none", "flex"),
+        display=rx.cond(ChatState.chat_history, "none", "flex"),
     )

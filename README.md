@@ -1,7 +1,6 @@
-Reflex x LLamaIndex
+# AI Chat using Reflex and LiteLLM
 
-## UI For Llama Deploy
-
-Follow the tutorial here:
-
-https://github.com/run-llama/llama_deploy/tree/main/examples/python_fullstack
+```bash
+pip install requirements.txt
+reflex run --loglevel debug
+```
