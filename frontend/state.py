@@ -1,3 +1,6 @@
+"""
+AI chat state with streaming response.
+"""
 import uuid
 from dataclasses import dataclass
 
@@ -20,6 +23,9 @@ class MessageRole:
     SYSTEM = 'system'
 
 
+STREAMING_MARKER = 'Just a moment...'
+
+
 class SettingsState(rx.State):
     # The accent color for the app
     color: str = 'violet'
@@ -30,17 +36,15 @@ class SettingsState(rx.State):
 class ChatState(rx.State):
     # The current question being asked
     question: str
-    # Capture the streaming response
-    streaming_content: str = ''
     # Whether the app is processing a question
-    processing: bool = False
+    is_processing: bool = False
     # Keep track of the chat history
     chat_history: list[dict[str, str]] = []
     model: str = 'gemini/gemini-2.0-flash-lite'
     user_id: str = str(uuid.uuid4())
 
     async def answer(self):
-        self.processing = True
+        self.is_processing = True
         yield
 
         query = self.question
@@ -49,7 +53,7 @@ class ChatState(rx.State):
 
         try:
             self.chat_history.append({'role': MessageRole.USER, 'content': query})
-            self.streaming_content = '' # Reset the streaming content
+            self.chat_history.append({'role': MessageRole.ASSISTANT, 'content': STREAMING_MARKER})
             async for chunk in await litellm.acompletion(
                     model=self.model,
                     messages=self.chat_history,
@@ -62,22 +66,17 @@ class ChatState(rx.State):
                 if 'choices' in chunk and chunk['choices'][0]['delta']:
                     delta_content = chunk['choices'][0]['delta'].content
                     if delta_content:
-                        self.streaming_content += str(delta_content)
-                        yield
+                        if self.chat_history[-1]['content'] == STREAMING_MARKER:
+                            self.chat_history[-1]['content'] = str(delta_content)
+                        else:
+                            self.chat_history[-1]['content'] += str(delta_content)
 
-            self.chat_history.append(
-                {'role': MessageRole.ASSISTANT, 'content': self.streaming_content}
-            )
-            yield
-            self.streaming_content = ''
+                        yield
         except Exception as e:
-            self.streaming_content = f'An error occurred: {e}'
+            self.chat_history[-1]['content'] = f'An error occurred: {e}'
             yield
-            self.chat_history.append(
-                {'role': MessageRole.ASSISTANT, 'content': self.streaming_content}
-            )
         finally:
-            self.processing = False
+            self.is_processing = False
             yield
 
     def get_history(self) -> list[dict[str, str]]:

@@ -1,3 +1,6 @@
+"""
+The chat area view.
+"""
 import reflex as rx
 
 from frontend.components.badge import made_with_reflex
@@ -19,16 +22,12 @@ def message_display(message: dict) -> rx.Component:
             rx.box(
                 rx.image(
                     src='llama.svg',
-                    class_name='h-6' + rx.cond(ChatState.processing, ' animate-pulse', ''),
+                    class_name='h-6' + rx.cond(ChatState.is_processing, ' animate-pulse', ''),
                 ),
             ),
             rx.box(
                 rx.markdown(
-                    rx.cond(
-                        ChatState.processing & (message == ChatState.chat_history[-1]),
-                        ChatState.streaming_content,  # Show incremental streaming content
-                        message['content'],  # Show finalized content
-                    ),
+                    message['content'],
                     class_name='[&>p]:!my-2.5',
                 ),
                 rx.box(
@@ -80,7 +79,7 @@ def action_bar() -> rx.Component:
             ),
             rx.el.button(
                 rx.cond(
-                    ChatState.processing,
+                    ChatState.is_processing,
                     rx.icon(
                         tag='loader-circle',
                         size=19,
@@ -89,10 +88,10 @@ def action_bar() -> rx.Component:
                     ),
                     rx.icon(tag='arrow-up', size=19, color='white'),
                 ),
-                on_click=[ChatState.answer, rx.set_value("input1", "")],
+                on_click=[ChatState.answer, rx.set_value('input1', '')],
                 class_name='top-1/2 right-4 absolute bg-accent-9 hover:bg-accent-10 disabled:hover:bg-accent-9 opacity-65 disabled:opacity-50 p-1.5 rounded-full transition-colors -translate-y-1/2 cursor-pointer disabled:cursor-default',
                 disabled=rx.cond(
-                    ChatState.processing | (ChatState.question == ''), True, False
+                    ChatState.is_processing | (ChatState.question == ''), True, False
                 ),
             ),
             class_name='relative w-full',
