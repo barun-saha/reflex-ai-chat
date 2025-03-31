@@ -1,52 +1,80 @@
 """
-The chat area view.
-"""
-import reflex as rx
+The chat area view module.
 
+This module defines the chat interface for an AI chat application. It includes components
+to display chat bubbles, manage the chat area, and an action bar for user inputs.
+"""
+
+import reflex as rx
 from frontend.components.badge import made_with_reflex
-from frontend.state import ChatState
+from frontend.state import ChatState, MessageRole
+
+
+# Shared style for the chat bubbles to dynamically adjust to their content
+CHAT_BUBBLE_STYLE = {
+    'display': 'inline-block',  # Dynamically adjust to content width
+    'max-width': '80%',  # Prevent bubbles from becoming too wide
+    'min-width': '10%',  # Set a minimum width for aesthetic consistency
+    'word-wrap': 'break-word',  # Ensure long words break properly
+}
 
 
 def message_display(message: dict) -> rx.Component:
+    """
+    Display a single chat message as a bubble.
+
+    Args:
+        message (dict): A dictionary containing the message content and role (user or assistant).
+
+    Returns:
+        rx.Component: A Reflex component representing the chat bubble for the message.
+    """
     def user_message():
+        """
+        Create a user message bubble aligned to the right.
+
+        Returns:
+            rx.Component: The user message bubble with left-aligned text.
+        """
         return rx.box(
             rx.markdown(
                 message['content'],
-                class_name='[&>p]:!my-2.5',
+                class_name='[&>p]:!my-2.5 text-left',  # Text aligns to the left
             ),
-            class_name='relative bg-slate-3 px-5 rounded-3xl max-w-[70%] text-slate-12 self-end',
+            class_name=(
+                'relative bg-slate-3 px-5 py-2 rounded-3xl text-slate-12 self-end'
+            ),
+            style=CHAT_BUBBLE_STYLE,
         )
 
     def assistant_message():
+        """
+        Create an assistant message bubble aligned to the left.
+
+        Returns:
+            rx.Component: The assistant message bubble with left-aligned text.
+        """
         return rx.box(
-            rx.box(
-                rx.image(
-                    src='llama.svg',
-                    class_name='h-6' + rx.cond(ChatState.is_processing, ' animate-pulse', ''),
-                ),
+            rx.image(
+                src='llama.svg',
+                class_name='h-6' + rx.cond(ChatState.is_processing, ' animate-pulse', ''),
             ),
             rx.box(
                 rx.markdown(
                     message['content'],
-                    class_name='[&>p]:!my-2.5',
+                    class_name='[&>p]:!my-2.5 text-left',  # Text aligns to the left
                 ),
-                rx.box(
-                    rx.el.button(
-                        rx.icon(tag='copy', size=18),
-                        class_name='p-1 text-slate-10 hover:text-slate-11 transform transition-colors cursor-pointer',
-                        on_click=[rx.set_clipboard(message['content']), rx.toast('Copied!')],
-                        title='Copy',
-                    ),
-                    class_name='-bottom-9 left-5 absolute opacity-0 group-hover:opacity-100 transition-opacity',
+                class_name=(
+                    'relative bg-accent-4 px-5 py-2 rounded-3xl text-slate-12 self-start'
                 ),
-                class_name='relative bg-accent-4 px-5 rounded-3xl max-w-[70%] text-slate-12 self-start',
+                style=CHAT_BUBBLE_STYLE,
             ),
             class_name='flex flex-row gap-6',
         )
 
     return rx.box(
         rx.cond(
-            message['role'] == 'user',
+            message['role'] == MessageRole.USER,
             user_message(),
             assistant_message(),
         ),
@@ -55,19 +83,36 @@ def message_display(message: dict) -> rx.Component:
 
 
 def chat() -> rx.Component:
+    """
+    Create the chat area component.
+
+    This component displays the chat history in a scrollable area.
+
+    Returns:
+        rx.Component: The scrollable chat area containing all chat bubbles.
+    """
     return rx.scroll_area(
         rx.vstack(
             rx.foreach(
                 ChatState.chat_history,
                 lambda message: message_display(message),
             ),
+            class_name='w-full flex flex-col items-stretch',  # Allows full-width flexibility
         ),
         scrollbars='vertical',
-        class_name='w-full',
+        class_name='w-full h-full',  # Ensures proper scrolling behavior
     )
 
 
 def action_bar() -> rx.Component:
+    """
+    Create the action bar component.
+
+    This component includes an input field for user queries and a send button to submit them.
+
+    Returns:
+        rx.Component: The action bar for user interactions.
+    """
     return rx.box(
         rx.box(
             rx.el.input(
