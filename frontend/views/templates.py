@@ -19,8 +19,8 @@ def template_card(icon: str, title: str, description: str, color: str) -> rx.Com
 def templates() -> rx.Component:
     return rx.box(
         rx.image(
-            src="/reflex_x_llamaindex.svg",
-            class_name="opacity-70 w-auto h-11 pointer-events-none",
+            src="/artificial-intelligence-assistant-22110.svg",
+            class_name="opacity-70 w-auto h-[80px] pointer-events-none",
         ),
         rx.box(
             template_card(

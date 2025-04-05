@@ -43,14 +43,24 @@ def message_display(message: dict) -> rx.Component:
             rx.Component: The user message bubble with left-aligned text.
         """
         return rx.box(
-            rx.markdown(
-                message['content'],
-                class_name='[&>p]:!my-2.5 text-left',  # Text aligns to the left
+            rx.flex(
+                rx.box(
+                    rx.markdown(
+                        message['content'],
+                        class_name='[&>p]:!my-2.5 text-left',  # Text aligns to the left
+                    ),
+                    class_name=(
+                        'relative bg-slate-3 px-5 py-2 rounded-3xl text-slate-12 self-end'
+                    ),
+                    style=CHAT_BUBBLE_STYLE,
+                ),
+                rx.image(
+                    src='customer-experience-and-blue-client-21010.svg',
+                    class_name='h-6',
+                ),
+                class_name='flex flex-row items-center gap-2 self-end',  # Aligns icon and bubble
             ),
-            class_name=(
-                'relative bg-slate-3 px-5 py-2 rounded-3xl text-slate-12 self-end'
-            ),
-            style=CHAT_BUBBLE_STYLE,
+            class_name='relative px-5 py-2 self-end',
         )
 
     def assistant_message():
@@ -63,7 +73,7 @@ def message_display(message: dict) -> rx.Component:
 
         return rx.box(
             rx.image(
-                src='llama.svg',
+                src='artificial-intelligence-assistant-22110.svg',
                 class_name='h-6' + rx.cond(ChatState.is_processing, ' animate-pulse', ''),
             ),
             rx.box(

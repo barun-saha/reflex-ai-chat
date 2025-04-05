@@ -10,14 +10,34 @@ badge_svg = """<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" vi
 
 
 def made_with_reflex() -> rx.Component:
-    return rx.link(
-        rx.html(badge_svg),
-        rx.text(
-            "Built with Reflex",
-            class_name="font-medium text-sm",
+    """
+    Create a footer with links.
+
+    Returns:
+        rx.Component: A footer container with links displayed side by side.
+    """
+
+    return rx.flex(
+        rx.link(
+            rx.html(badge_svg),
+            rx.text(
+                "Built with Reflex",
+                class_name="font-medium text-sm",
+            ),
+            href="https://reflex.dev/",
+            is_external=True,
+            color_scheme="violet",
+            class_name="flex flex-row justify-center items-center gap-1.5 opacity-50 hover:opacity-100 transition-opacity",
         ),
-        href="https://reflex.dev/",
-        is_external=True,
-        color_scheme="violet",
-        class_name="flex flex-row justify-center items-center gap-1.5 opacity-50 hover:opacity-100 w-full transition-opacity",
+        rx.link(
+            rx.text(
+                "Icons by Iconpacks",
+                class_name="font-medium text-sm",
+            ),
+            href="https://www.iconpacks.net/",
+            is_external=True,
+            color_scheme="violet",
+            class_name="flex flex-row justify-center items-center gap-1.5 opacity-50 hover:opacity-100 transition-opacity",
+        ),
+        class_name="flex flex-row justify-center items-center gap-4 w-full",
     )
