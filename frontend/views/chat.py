@@ -4,10 +4,15 @@ The chat area view module.
 This module defines the chat interface for an AI chat application. It includes components
 to display chat bubbles, manage the chat area, and an action bar for user inputs.
 """
-
 import reflex as rx
+
 from frontend.components.badge import made_with_reflex
-from frontend.state import ChatState, MessageRole
+from frontend.state import (
+    ChatState,
+    MessageRole,
+    CHAT_SCROLL_ELEMENT,
+    CHAT_TEXT_INPUT,
+)
 
 
 # Shared style for the chat bubbles to dynamically adjust to their content
@@ -29,6 +34,7 @@ def message_display(message: dict) -> rx.Component:
     Returns:
         rx.Component: A Reflex component representing the chat bubble for the message.
     """
+
     def user_message():
         """
         Create a user message bubble aligned to the right.
@@ -54,6 +60,7 @@ def message_display(message: dict) -> rx.Component:
         Returns:
             rx.Component: The assistant message bubble with left-aligned text.
         """
+
         return rx.box(
             rx.image(
                 src='llama.svg',
@@ -91,6 +98,7 @@ def chat() -> rx.Component:
     Returns:
         rx.Component: The scrollable chat area containing all chat bubbles.
     """
+
     return rx.scroll_area(
         rx.vstack(
             rx.foreach(
@@ -101,6 +109,7 @@ def chat() -> rx.Component:
         ),
         scrollbars='vertical',
         class_name='w-full h-full',  # Ensures proper scrolling behavior
+        id=CHAT_SCROLL_ELEMENT
     )
 
 
@@ -113,16 +122,16 @@ def action_bar() -> rx.Component:
     Returns:
         rx.Component: The action bar for user interactions.
     """
-    return rx.box(
-        rx.box(
-            rx.el.input(
+
+    return rx.vstack(
+        rx.form(
+            rx.input(
                 placeholder='Ask me anything',
                 on_blur=ChatState.set_question,
-                on_key_down=ChatState.handle_key_down,
-                id='input1',
+                id=CHAT_TEXT_INPUT,
                 class_name='box-border bg-slate-3 px-4 py-2 pr-14 rounded-full w-full outline-none focus:outline-accent-10 h-[48px] text-slate-12 placeholder:text-slate-9',
             ),
-            rx.el.button(
+            rx.button(
                 rx.cond(
                     ChatState.is_processing,
                     rx.icon(
@@ -133,13 +142,15 @@ def action_bar() -> rx.Component:
                     ),
                     rx.icon(tag='arrow-up', size=19, color='white'),
                 ),
-                on_click=[ChatState.answer, rx.set_value('input1', '')],
                 class_name='top-1/2 right-4 absolute bg-accent-9 hover:bg-accent-10 disabled:hover:bg-accent-9 opacity-65 disabled:opacity-50 p-1.5 rounded-full transition-colors -translate-y-1/2 cursor-pointer disabled:cursor-default',
                 disabled=rx.cond(
-                    ChatState.is_processing | (ChatState.question == ''), True, False
+                    ChatState.is_processing, True, False
                 ),
+                type='submit'
             ),
             class_name='relative w-full',
+            on_submit=[ChatState.handle_query_submission, ],
+            reset_on_submit=True,
         ),
         # Made with Reflex link
         made_with_reflex(),
